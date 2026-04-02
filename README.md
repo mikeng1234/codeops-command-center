@@ -1,17 +1,53 @@
 # CodeOps Command Center
 
-A real-time standards review dashboard for Claude Code projects. Hired AI agents continuously audit your codebase and surface findings — live, in your browser.
+**A standards review system for vibecoders — powered by Claude Code agents.**
 
-![CodeOps Command Center](public/CCC.png)
+You can build fast with AI. But do you know if what you built is resilient? Accessible? Performant? Secure? Most vibecoders don't — not because they're careless, but because those disciplines take years to internalize.
 
-## What it does
+CodeOps Command Center closes that gap. It hires a team of specialist AI agents that continuously audit your codebase against industry standards — and surfaces every finding in a live dashboard, ranked by what matters most.
 
-- **Live dashboard** — findings update in real time via SSE as agents write to `.standards-review/`
-- **6 specialist agents** — Code, Compliance, UX, Performance, Resilience, Visual Regression
-- **Priority sidebar** — all open findings ranked by foundational severity (crashes first, nitpicks last)
-- **Agent roster** — each agent has a unique avatar, mood state, and profile card
-- **Finding detail** — click any finding for a plain-language explanation of why it matters
-- **Responsive** — works on desktop, tablet, and mobile
+You don't need to know what WCAG is. You don't need to know what EADDRINUSE means. The agents do, and they'll tell you in plain language when something's wrong and why it matters.
+
+---
+
+## The problem it solves
+
+Vibe-coded projects move fast but accumulate invisible debt:
+
+- **Resilience** — no error handling, silent failures, crashes on edge cases
+- **Accessibility** — keyboard users locked out, screen readers broken
+- **Performance** — DOM rebuilds on every keystroke, 8 filter passes where 1 would do
+- **Security** — unsanitized inputs, missing Content-Security-Policy headers
+- **UX** — buttons that do nothing visible, no loading states, no retry on failure
+- **Visual** — layouts that collapse on mobile, tooltips clipped by overflow:hidden
+
+These aren't stylistic opinions — they're foundational engineering standards. CodeOps surfaces them automatically, even if you've never heard of them.
+
+---
+
+## How it works
+
+1. **Hire agents** — At the start of a Claude Code session, Claude assesses your project and recommends a roster of specialist agents from the databank
+2. **Agents audit** — After completing any work, the active agents review changed files against their checklists and write structured findings to `.standards-review/`
+3. **Dashboard updates live** — The Command Center watches that folder and pushes updates to your browser in real time via SSE
+4. **You fix with confidence** — Every finding is ranked by foundational priority (crashes first, nitpicks last) with a plain-language explanation of why it matters
+
+---
+
+## The agent roster
+
+| Agent | What they enforce |
+|-------|-------------------|
+| **Resilience Reviewer** | Error handling, crash prevention, reconnection logic, fallback behavior |
+| **Code Reviewer** | Correctness, edge cases, maintainability, named constants |
+| **Compliance Reviewer** | WCAG 2.2 AA accessibility, OWASP security, input sanitization |
+| **UX Reviewer** | Feedback loops, loading/error states, touch targets, focus management |
+| **Performance Reviewer** | DOM efficiency, algorithm complexity, unnecessary re-renders |
+| **Visual Regression Reviewer** | Layout integrity, responsive breakpoints, overflow handling |
+
+Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
+
+---
 
 ## Setup
 
@@ -23,27 +59,29 @@ npm install
 node server.js --project /path/to/your/project
 ```
 
-Then open `http://localhost:3177` in your browser.
+Open `http://localhost:3177` — the dashboard connects automatically and stays live.
 
-The server watches `.standards-review/*.json` in your project directory. Whenever a Claude agent writes findings, the dashboard updates instantly.
+**Port:** Default `3177`. Override with `PORT=<number> node server.js --project <path>`.
+
+---
 
 ## How agents write findings
 
-Each hired agent writes a JSON file to `.standards-review/{agent-id}.json`:
+Each agent writes to `.standards-review/{agent-id}.json`:
 
 ```json
 {
-  "role": "code-reviewer",
+  "role": "resilience-reviewer",
   "lastChecked": "2026-04-02T10:00:00Z",
-  "summary": "2 open, 1 resolved",
+  "summary": "1 open, 2 resolved",
   "findings": [
     {
-      "id": "cr-001",
+      "id": "rs-001",
       "severity": "issue",
-      "title": "Missing input validation on public endpoint",
-      "description": "The /api/submit handler does not validate...",
-      "file": "src/api/submit.js",
-      "line": 42,
+      "title": "No EADDRINUSE handler — server exits with cryptic error if port is taken",
+      "description": "app.listen() has no .on('error') handler. Add one that catches EADDRINUSE and prints a clear message before exiting.",
+      "file": "server.js",
+      "line": 171,
       "status": "open",
       "createdAt": "2026-04-02T10:00:00Z",
       "resolvedAt": null
@@ -52,14 +90,14 @@ Each hired agent writes a JSON file to `.standards-review/{agent-id}.json`:
 }
 ```
 
-**Severity levels:** `issue` · `suggestion` · `nitpick` · `praise`
+**Severity levels:** `issue` (must fix) · `suggestion` (should fix) · `nitpick` (optional) · `praise` (good practice spotted)
 
-## Port
+The `.standards-review/` folder is gitignored — findings stay local to each project.
 
-Default: `3177`. Override with `PORT=<number> node server.js --project <path>`.
+---
 
 ## Stack
 
 - **Backend** — Node.js, Express, Chokidar
-- **Frontend** — Vanilla HTML/CSS/JS, SSE
-- No build step, no framework, no bundler
+- **Frontend** — Vanilla HTML/CSS/JS, Server-Sent Events
+- No build step. No framework. No bundler. Just run it.
