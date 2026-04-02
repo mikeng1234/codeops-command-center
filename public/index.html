@@ -443,6 +443,15 @@
   .finding.severity-praise { border-left-color: var(--praise); }
   .finding.resolved { background: var(--resolved-bg); opacity: 0.6; }
   .finding.resolved .finding-title { text-decoration: line-through; color: var(--resolved-text); }
+  .finding.active-focus {
+    box-shadow: 0 0 0 1px rgba(255,220,80,0.4), 0 0 12px 3px rgba(255,200,40,0.25);
+    border-left-color: #ffd040 !important;
+    animation: glowPulse 2s ease-in-out infinite, slideIn 0.3s ease-out;
+  }
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(255,220,80,0.4), 0 0 12px 3px rgba(255,200,40,0.25); }
+    50%       { box-shadow: 0 0 0 1px rgba(255,220,80,0.7), 0 0 20px 6px rgba(255,200,40,0.45); }
+  }
 
   .finding-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
   .finding-title { font-size: 11px; font-weight: 600; flex: 1; }
@@ -609,6 +618,7 @@
 let ROLES = [];
 const SEVERITY_TYPES = ["issue", "suggestion", "nitpick", "praise"];
 let currentAllData = {};
+let currentSession = null;
 
 // ── Agent Personas ──────────────────────────────────────────────
 const AGENT_PERSONAS = {
@@ -723,6 +733,30 @@ function timeAgo(iso) {
   if (days === 1) return "yesterday";
   if (days < 7) return `${days} days ago`;
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+function isActiveFocus(finding, agentKey) {
+  if (!currentSession || finding.status === "resolved") return false;
+  const { mode, tier, ids } = currentSession;
+  if (mode === "tier" && tier != null) {
+    const tierMap = {
+      1: ["resilience-reviewer"],
+      2: ["code-reviewer"],
+      3: ["compliance-reviewer"],
+      4: ["ux-reviewer"],
+      5: ["performance-reviewer"],
+      6: ["visual-regression-reviewer"]
+    };
+    const agents = tierMap[tier] || [];
+    return agents.includes(agentKey) && finding.severity === "issue";
+  }
+  if (mode === "ids" && Array.isArray(ids)) {
+    return ids.includes(finding.id);
+  }
+  if (mode === "agent") {
+    return currentSession.agent === agentKey && finding.status === "open";
+  }
+  return false;
 }
 
 function escapeHTML(str) {
@@ -1164,7 +1198,7 @@ function renderPanel(role, data) {
       const isResolved = f.status === "resolved";
       const fileMeta = f.file ? `${f.file}${f.line ? ":" + f.line : ""}` : "";
       return `
-        <div class="finding severity-${f.severity} ${isResolved ? "resolved" : ""}" role="button" tabindex="0" aria-label="${escapeHTML(f.title)} — ${f.severity}" data-agent="${role.key}" data-id="${escapeHTML(f.id)}">
+        <div class="finding severity-${f.severity} ${isResolved ? "resolved" : ""}${isActiveFocus(f, role.key) ? " active-focus" : ""}" role="button" tabindex="0" aria-label="${escapeHTML(f.title)} — ${f.severity}" data-agent="${role.key}" data-id="${escapeHTML(f.id)}">
           <div class="finding-top">
             <span class="finding-title">${isResolved ? '<span class="resolved-check">&#10003;</span>' : ""}${escapeHTML(f.title)}</span>
             <span class="severity-badge ${f.severity}">${f.severity}</span>
@@ -1237,8 +1271,9 @@ function panelChanged(key, allData) {
   return false;
 }
 
-function renderAll(allData) {
+function renderAll(allData, session) {
   currentAllData = allData;
+  currentSession = session || null;
   const newRoles = buildRolesFromData(allData);
   const rolesChanged = !gridInitialized || newRoles.length !== ROLES.length || newRoles.some((r, i) => r.key !== ROLES[i]?.key);
 
@@ -1281,7 +1316,7 @@ fetch("/api/findings")
   .then(r => r.json())
   .then(res => {
     document.getElementById("projectPath").textContent = res.projectPath;
-    renderAll(res.data);
+    renderAll(res.data, res.session);
   })
   .catch(err => {
     document.getElementById("projectPath").textContent = "Connection failed";
@@ -1304,7 +1339,7 @@ function retryFetch() {
     .then(r => r.json())
     .then(res => {
       document.getElementById("projectPath").textContent = res.projectPath;
-      renderAll(res.data);
+      renderAll(res.data, res.session);
     })
     .catch(() => showFetchError());
 }
@@ -1334,7 +1369,8 @@ function connectSSE() {
       return;
     }
     try {
-      renderAll(JSON.parse(event.data));
+      const payload = JSON.parse(event.data);
+      renderAll(payload.data || payload, payload.session || null);
     } catch (err) {
       console.error("[SSE] Failed to parse or render update:", err);
     }

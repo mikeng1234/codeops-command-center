@@ -25,7 +25,7 @@ let cachedData = {};
 function discoverAgents() {
   try {
     return fs.readdirSync(reviewDir)
-      .filter((f) => f.endsWith(".json") && f !== "manifest.json" && f !== "audit-requested.json")
+      .filter((f) => f.endsWith(".json") && !["manifest.json","audit-requested.json","session.json"].includes(f))
       .map((f) => f.replace(".json", ""));
   } catch {
     return [];
@@ -69,8 +69,17 @@ function removeAgent(agent) {
 
 // ── REST endpoints ─────────────────────────────────────────────
 app.get("/api/findings", (_req, res) => {
-  res.json({ projectPath: path.resolve(projectPath), data: readAllFindings() });
+  const session = readSession();
+  res.json({ projectPath: path.resolve(projectPath), data: readAllFindings(), session });
 });
+
+function readSession() {
+  const sessionFile = path.join(reviewDir, "session.json");
+  try {
+    if (!fs.existsSync(sessionFile)) return null;
+    return JSON.parse(fs.readFileSync(sessionFile, "utf-8"));
+  } catch { return null; }
+}
 
 app.delete("/api/request-audit", (_req, res) => {
   const auditFile = path.join(reviewDir, "audit-requested.json");
@@ -116,7 +125,7 @@ app.get("/api/stream", (req, res) => {
 });
 
 function broadcast() {
-  const payload = JSON.stringify(cachedData);
+  const payload = JSON.stringify({ data: cachedData, session: readSession() });
   for (const client of clients) {
     try {
       client.write(`data: ${payload}\n\n`);
