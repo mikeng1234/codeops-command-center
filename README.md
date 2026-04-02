@@ -55,6 +55,9 @@ These aren't stylistic opinions — they're foundational engineering standards. 
 | **UX Reviewer** | Feedback loops, loading/error states, touch targets, focus management |
 | **Performance Reviewer** | DOM efficiency, algorithm complexity, unnecessary re-renders |
 | **Visual Regression Reviewer** | Layout integrity, responsive breakpoints, overflow handling |
+| **Secrets & Environment Reviewer** | Hardcoded API keys, committed `.env` files, secrets in logs |
+| **Dependency Auditor** | CVEs, abandoned packages, supply chain risk, dependency bloat |
+| **Data Privacy Reviewer** | PII in logs, plain-text passwords, third-party data sharing, GDPR basics |
 
 Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
 

@@ -101,6 +101,36 @@
       "severity_prefix": "vr",
       "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte", "tailwind", "grid", "flexbox"],
       "description": "Layout integrity, overflow detection, cross-browser rendering, visual consistency"
+    },
+    {
+      "id": "secrets-env-reviewer",
+      "name": "Secrets & Environment Reviewer",
+      "category": "security",
+      "icon": "K",
+      "file": "secrets-env-reviewer.md",
+      "severity_prefix": "se",
+      "tech_signals": ["any"],
+      "description": "Detects hardcoded secrets, exposed credentials, and unsafe environment variable handling"
+    },
+    {
+      "id": "dependency-auditor",
+      "name": "Dependency Auditor",
+      "category": "security",
+      "icon": "D",
+      "file": "dependency-auditor.md",
+      "severity_prefix": "da",
+      "tech_signals": ["npm", "yarn", "pnpm", "pip", "cargo", "package.json", "requirements.txt"],
+      "description": "Flags CVEs, abandoned packages, dependency bloat, and supply chain risk"
+    },
+    {
+      "id": "data-privacy-reviewer",
+      "name": "Data Privacy Reviewer",
+      "category": "privacy",
+      "icon": "P",
+      "file": "data-privacy-reviewer.md",
+      "severity_prefix": "dp",
+      "tech_signals": ["any"],
+      "description": "PII handling, data retention, consent, GDPR basics, and safe logging"
     }
   ]
 }

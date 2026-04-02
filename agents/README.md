@@ -28,6 +28,9 @@ Then start a new Claude Code session in your project — Claude will read the re
 | `ux-reviewer.md` | UX Reviewer | Missing feedback, broken states, touch targets |
 | `performance-reviewer.md` | Performance Reviewer | Unbounded loops, DOM thrashing, memory leaks |
 | `visual-regression-reviewer.md` | Visual Regression Reviewer | Layout overflow, text clipping, viewport breakage |
+| `secrets-env-reviewer.md` | Secrets & Environment Reviewer | Hardcoded API keys, committed `.env`, secrets in logs |
+| `dependency-auditor.md` | Dependency Auditor | CVEs, abandoned packages, bloated dependencies |
+| `data-privacy-reviewer.md` | Data Privacy Reviewer | PII in logs, plain-text passwords, GDPR violations |
 
 ---
 
