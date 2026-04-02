@@ -1350,6 +1350,13 @@ function connectSSE() {
   };
 }
 connectSSE();
+
+// Re-render timestamps every 60 seconds so "just now" ages into "1 min ago" etc.
+setInterval(() => {
+  if (Object.keys(prevData).length === 0) return;
+  renderPanels(prevData);
+  renderSummary(prevData);
+}, 60_000);
 </script>
 
 <!-- Sidebar flyout panels (fixed position, rendered by JS) -->

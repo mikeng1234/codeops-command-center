@@ -10,6 +10,16 @@ You don't need to know what WCAG is. You don't need to know what EADDRINUSE mean
 
 ---
 
+## Screenshots
+
+**Live dashboard — all agents reporting in real time:**
+![CodeOps Command Center Dashboard](public/Dashboard.png)
+
+**Agent finding detail pop-up:**
+![Finding detail pop-up](public/window-popup.png)
+
+---
+
 ## The problem it solves
 
 Vibe-coded projects move fast but accumulate invisible debt:
