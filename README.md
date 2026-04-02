@@ -58,6 +58,9 @@ These aren't stylistic opinions — they're foundational engineering standards. 
 | **Secrets & Environment Reviewer** | Hardcoded API keys, committed `.env` files, secrets in logs |
 | **Dependency Auditor** | CVEs, abandoned packages, supply chain risk, dependency bloat |
 | **Data Privacy Reviewer** | PII in logs, plain-text passwords, third-party data sharing, GDPR basics |
+| **API Design Reviewer** | Inconsistent endpoints, missing error shapes, no versioning, no rate limiting |
+| **Database Safety Reviewer** | SQL injection, missing indexes, unsafe migrations, no row-level security |
+| **Git Hygiene Reviewer** | Vague commit messages, staged `.env`, binary files, missing `.gitignore` entries |
 
 Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
 

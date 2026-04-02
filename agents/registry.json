@@ -131,6 +131,36 @@
       "severity_prefix": "dp",
       "tech_signals": ["any"],
       "description": "PII handling, data retention, consent, GDPR basics, and safe logging"
+    },
+    {
+      "id": "api-design-reviewer",
+      "name": "API Design Reviewer",
+      "category": "api-quality",
+      "icon": "A",
+      "file": "api-design-reviewer.md",
+      "severity_prefix": "api",
+      "tech_signals": ["express", "fastify", "koa", "hapi", "flask", "django", "rails", "nextjs", "api", "router", "endpoint"],
+      "description": "REST consistency, error response shapes, versioning, and rate limiting"
+    },
+    {
+      "id": "database-safety-reviewer",
+      "name": "Database Safety Reviewer",
+      "category": "data-integrity",
+      "icon": "B",
+      "file": "database-safety-reviewer.md",
+      "severity_prefix": "db",
+      "tech_signals": ["sql", "postgres", "mysql", "sqlite", "supabase", "prisma", "drizzle", "mongoose", "sequelize", "knex", "typeorm", "database", "db", "query"],
+      "description": "SQL injection, missing indexes, unsafe migrations, soft deletes, sensitive data storage"
+    },
+    {
+      "id": "git-hygiene-reviewer",
+      "name": "Git Hygiene Reviewer",
+      "category": "workflow",
+      "icon": "G",
+      "file": "git-hygiene-reviewer.md",
+      "severity_prefix": "gh",
+      "tech_signals": ["any"],
+      "description": "Commit quality, staged file safety, .gitignore coverage, repository cleanliness"
     }
   ]
 }

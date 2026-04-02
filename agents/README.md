@@ -31,6 +31,9 @@ Then start a new Claude Code session in your project — Claude will read the re
 | `secrets-env-reviewer.md` | Secrets & Environment Reviewer | Hardcoded API keys, committed `.env`, secrets in logs |
 | `dependency-auditor.md` | Dependency Auditor | CVEs, abandoned packages, bloated dependencies |
 | `data-privacy-reviewer.md` | Data Privacy Reviewer | PII in logs, plain-text passwords, GDPR violations |
+| `api-design-reviewer.md` | API Design Reviewer | Inconsistent endpoints, missing error shapes, no rate limiting |
+| `database-safety-reviewer.md` | Database Safety Reviewer | SQL injection, missing indexes, unsafe migrations, no RLS |
+| `git-hygiene-reviewer.md` | Git Hygiene Reviewer | Vague commits, staged `.env`, binary files, no `.gitignore` |
 
 ---
 
