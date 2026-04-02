@@ -1,6 +1,7 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
+const { execSync } = require("child_process");
 const chokidar = require("chokidar");
 
 const args = process.argv.slice(2);
@@ -182,10 +183,45 @@ const server = app.listen(PORT, () => {
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`\n  ✖ Port ${PORT} is already in use.`);
-    console.error(`  Stop the other process or set a different port: PORT=<other> node server.js\n`);
+    console.log(`\n  ↻ Port ${PORT} is in use — killing old process and restarting...`);
+    try {
+      if (process.platform === "win32") {
+        // Windows: find PID via netstat, then taskkill
+        const netstat = execSync(`netstat -ano | findstr :${PORT}`, { encoding: "utf-8" });
+        const match = netstat.match(/LISTENING\s+(\d+)/);
+        if (match) {
+          const pid = match[1];
+          execSync(`taskkill /PID ${pid} /F`);
+          console.log(`  Killed PID ${pid}`);
+        }
+      } else {
+        // macOS / Linux: lsof
+        const lsof = execSync(`lsof -ti tcp:${PORT}`, { encoding: "utf-8" }).trim();
+        if (lsof) {
+          lsof.split("\n").forEach(pid => { execSync(`kill -9 ${pid.trim()}`); });
+          console.log(`  Killed PID(s) ${lsof.replace(/\n/g, ", ")}`);
+        }
+      }
+      // Brief pause then re-attempt
+      setTimeout(() => {
+        const retry = app.listen(PORT, () => {
+          console.log(`  ✔ Restarted on port ${PORT}`);
+          console.log(`  Project: ${path.resolve(projectPath)}`);
+          console.log(`  Watching: ${reviewDir}`);
+          console.log(`  Dashboard: http://localhost:${PORT}\n`);
+        });
+        retry.on("error", (e) => {
+          console.error(`\n  ✖ Still cannot bind to port ${PORT}: ${e.message}\n`);
+          process.exit(1);
+        });
+      }, 500);
+    } catch (killErr) {
+      console.error(`\n  ✖ Could not free port ${PORT}: ${killErr.message}`);
+      console.error(`  Try manually: PORT=<other> node server.js --project <path>\n`);
+      process.exit(1);
+    }
   } else {
     console.error("\n  ✖ Server error:", err.message, "\n");
+    process.exit(1);
   }
-  process.exit(1);
 });
