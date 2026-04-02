@@ -1351,11 +1351,29 @@ function connectSSE() {
 }
 connectSSE();
 
-// Re-render timestamps every 60 seconds so "just now" ages into "1 min ago" etc.
+// Refresh timestamp text nodes every 60 seconds so "just now" ages correctly.
+// Walks the live DOM and replaces text without triggering a full re-render.
 setInterval(() => {
-  if (Object.keys(prevData).length === 0) return;
-  renderPanels(prevData);
-  renderSummary(prevData);
+  if (!currentAllData || Object.keys(currentAllData).length === 0) return;
+
+  // "Last checked:" labels
+  document.querySelectorAll(".last-checked").forEach(el => {
+    const key = el.closest("section")?.id?.replace("panel-", "");
+    if (!key || !currentAllData[key]) return;
+    el.textContent = `Last checked: ${timeAgo(currentAllData[key].lastChecked)}`;
+  });
+
+  // "resolved X ago" in finding-meta spans
+  document.querySelectorAll(".finding-meta").forEach(el => {
+    const agentKey = el.closest("section")?.id?.replace("panel-", "");
+    const findingId = el.closest("[data-id]")?.dataset?.id;
+    if (!agentKey || !findingId || !currentAllData[agentKey]) return;
+    const f = currentAllData[agentKey].findings?.find(x => x.id === findingId);
+    if (!f || f.status !== "resolved" || !f.resolvedAt) return;
+    // Rebuild meta preserving the file·line prefix
+    const filePart = f.file ? `${escapeHTML(f.file)}${f.line ? `:${f.line}` : ""}` : "";
+    el.innerHTML = `${filePart}${filePart ? " &middot; " : ""}resolved ${timeAgo(f.resolvedAt)}`;
+  });
 }, 60_000);
 </script>
 
