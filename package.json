@@ -1,0 +1,13 @@
+{
+  "name": "standards-review-dashboard",
+  "version": "1.0.0",
+  "description": "Live overlay dashboard for Claude Code expert review findings",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "chokidar": "^4.0.0"
+  }
+}

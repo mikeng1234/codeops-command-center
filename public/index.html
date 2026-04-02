@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeOps Command Center</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface-hover: #1a1a25;
+    --border: #1e1e2e;
+    --text: #e0e0e8;
+    --text-dim: #8585a0;
+    --accent: #6c63ff;
+    --issue: #ff5c5c;
+    --suggestion: #ffb84d;
+    --nitpick: #5ca0ff;
+    --praise: #4ade80;
+    --resolved-bg: #0d1f14;
+    --resolved-text: #2d7a4a;
+    --sidebar-w-collapsed: 52px;
+    --sidebar-w-expanded: 180px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 8px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); flex-shrink: 0;
+  }
+  .header-brand { display: flex; align-items: center; gap: 12px; }
+  .header-logo {
+    width: 36px; height: 36px; border-radius: 8px;
+    object-fit: contain; flex-shrink: 0;
+  }
+  header h1 { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+  .project-path {
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+  }
+  .connection-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--issue); transition: background 0.3s;
+  }
+  .status-dot.connected { background: var(--praise); }
+
+  /* Summary bar */
+  .summary-bar {
+    display: flex; align-items: center;
+    padding: 0 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .summary-bar-items {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 8px 0; flex: 1; min-width: 0;
+  }
+  .summary-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  }
+  .summary-item .label { color: var(--text-dim); font-weight: 500; }
+  .summary-item .open-count { color: var(--issue); }
+  .summary-item .resolved-count { color: var(--praise); }
+  .summary-item.type-issue { border-left: 3px solid var(--issue); }
+  .summary-item.type-suggestion { border-left: 3px solid var(--suggestion); }
+  .summary-item.type-nitpick { border-left: 3px solid var(--nitpick); }
+  .summary-item.type-praise { border-left: 3px solid var(--praise); }
+  .summary-total {
+    flex-shrink: 0; padding: 8px 0 8px 12px;
+    font-size: 12px; color: var(--text-dim); display: flex; gap: 12px;
+    align-self: flex-start;
+  }
+  .summary-total span { font-weight: 600; }
+  .summary-total .total-open { color: var(--issue); }
+  .summary-total .total-resolved { color: var(--praise); }
+
+  /* Main content row: sidebar + grid */
+  .main-row { display: flex; flex: 1; min-height: 0; }
+
+  /* ── Sidebar ──────────────────────────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w-collapsed); min-width: var(--sidebar-w-collapsed);
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; transition: width 0.3s ease, min-width 0.3s ease;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .sidebar.expanded {
+    width: var(--sidebar-w-expanded); min-width: var(--sidebar-w-expanded);
+  }
+  .sidebar:hover {
+    width: var(--sidebar-w-expanded); min-width: var(--sidebar-w-expanded);
+  }
+  .sidebar-toggle {
+    padding: 10px; border: none; background: none; color: var(--text-dim);
+    cursor: pointer; font-size: 16px; text-align: center;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.2s, background 0.15s;
+    position: relative;
+  }
+  .sidebar-toggle:hover { color: var(--text); background: var(--surface-hover); }
+  /* Pinned state — accent tint */
+  .sidebar.expanded .sidebar-toggle { color: var(--accent); }
+  .sidebar.expanded .sidebar-toggle:hover { color: var(--text-dim); }
+
+  /* ── Flyout panels ─────────────────────────────────────────── */
+  .sidebar-flyout {
+    position: fixed; z-index: 300;
+    width: 200px; max-height: 320px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 0 10px 10px 0; border-left: none;
+    display: flex; flex-direction: column;
+    box-shadow: 8px 0 24px rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none;
+    transform: translateX(-6px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+  .sidebar-flyout.visible { opacity: 1; pointer-events: all; transform: translateX(0); }
+  .sidebar-flyout-header {
+    padding: 7px 12px; font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .sidebar-flyout-header svg { color: var(--accent); }
+  .sidebar-flyout-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+  .sidebar-flyout-body::-webkit-scrollbar { width: 3px; }
+  .sidebar-flyout-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Section wrapper */
+  .sidebar-section {
+    flex: 0 0 auto; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar-section.open { flex: 1 1 0; min-height: 0; }
+  .sidebar-section + .sidebar-section { border-top: 1px solid var(--border); }
+
+  /* Section header — clickable */
+  .sidebar-section-label {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; cursor: pointer; flex-shrink: 0;
+    color: var(--text-dim); white-space: nowrap; user-select: none;
+    background: none; border: none; width: 100%;
+    transition: background 0.15s, color 0.15s;
+  }
+  .sidebar-section-label:hover { background: var(--surface-hover); color: var(--text); }
+
+  /* Icon — always visible, aligns with agent avatars */
+  .sidebar-section-icon {
+    width: 28px; height: 28px; min-width: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; background: var(--bg); border: 2px solid var(--border);
+    color: var(--text-dim); transition: border-color 0.15s, color 0.15s;
+  }
+  .sidebar-section-label:hover .sidebar-section-icon { border-color: var(--accent); color: var(--accent); }
+  .sidebar-section.open .sidebar-section-label .sidebar-section-icon { border-color: var(--accent); color: var(--accent); }
+
+  /* Text + chevron — fade in when sidebar is open */
+  .sidebar-section-text {
+    font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+    flex: 1; text-align: left;
+    opacity: 0; transition: opacity 0.2s ease 0.1s;
+  }
+  .sidebar-section-chevron {
+    font-size: 8px; opacity: 0;
+    transition: opacity 0.2s ease 0.1s, transform 0.25s ease;
+    display: inline-block;
+  }
+  .sidebar.expanded .sidebar-section-text,
+  .sidebar:hover .sidebar-section-text,
+  .sidebar.expanded .sidebar-section-chevron,
+  .sidebar:hover .sidebar-section-chevron { opacity: 1; }
+  .sidebar-section.open .sidebar-section-chevron { transform: rotate(90deg); }
+
+  /* Collapsible content */
+  .sidebar-section-body {
+    flex: 1; overflow: hidden; min-height: 0;
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.25s ease;
+  }
+  .sidebar-section.open .sidebar-section-body { grid-template-rows: 1fr; }
+  .sidebar-section-body > * { overflow: hidden; min-height: 0; }
+
+  /* Agents */
+  .sidebar-agents {
+    overflow-y: auto; padding: 4px 0; height: 100%;
+  }
+  .sidebar-agents::-webkit-scrollbar { width: 3px; }
+  .sidebar-agents::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .sidebar-agent {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; cursor: pointer; transition: background 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-agent:hover { background: var(--surface-hover); }
+  .sidebar-agent.mood-happy { border-left-color: var(--praise); }
+  .sidebar-agent.mood-proud { border-left-color: var(--praise); }
+  .sidebar-agent.mood-thinking { border-left-color: var(--suggestion); }
+  .sidebar-agent.mood-concerned { border-left-color: var(--issue); }
+  .sidebar-agent.mood-idle { border-left-color: transparent; }
+  .sidebar-agent-avatar {
+    width: 28px; height: 28px; min-width: 28px; border-radius: 6px;
+    image-rendering: pixelated; border: 2px solid var(--border); background: var(--bg);
+    overflow: hidden;
+  }
+  .sidebar-agent.mood-happy .sidebar-agent-avatar,
+  .sidebar-agent.mood-proud .sidebar-agent-avatar { border-color: var(--praise); }
+  .sidebar-agent.mood-thinking .sidebar-agent-avatar { border-color: var(--suggestion); }
+  .sidebar-agent.mood-concerned .sidebar-agent-avatar { border-color: var(--issue); }
+  .sidebar-agent-name {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity 0.2s ease 0.1s;
+  }
+  .sidebar.expanded .sidebar-agent-name,
+  .sidebar:hover .sidebar-agent-name { opacity: 1; }
+
+  /* Priority list */
+  .sidebar-priority {
+    overflow-y: auto; padding: 4px 0; height: 100%;
+  }
+  .sidebar-priority::-webkit-scrollbar { width: 3px; }
+  .sidebar-priority::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .sidebar-priority-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 9px 10px; cursor: pointer; transition: background 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .sidebar-priority-item:hover { background: var(--surface-hover); }
+  .sidebar-priority-item.sev-issue { border-left-color: var(--issue); }
+  .sidebar-priority-item.sev-suggestion { border-left-color: var(--suggestion); }
+  .sidebar-priority-item.sev-nitpick { border-left-color: var(--nitpick); }
+  .sidebar-priority-dot {
+    width: 8px; height: 8px; min-width: 8px; border-radius: 50%; margin-top: 3px;
+    flex-shrink: 0;
+    /* Tooltip on collapsed sidebar so dots aren't silent */
+    position: relative;
+  }
+  .sidebar:not(.expanded):not(:hover) .sidebar-priority-item:hover .sidebar-priority-dot::after {
+    content: attr(data-title);
+    position: fixed; left: calc(var(--sidebar-w-collapsed) + 8px); transform: translateY(-50%);
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 10px; font-weight: 500;
+    padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+    pointer-events: none; z-index: 400;
+    box-shadow: 4px 4px 12px rgba(0,0,0,0.4);
+  }
+  .sev-issue .sidebar-priority-dot { background: var(--issue); }
+  .sev-suggestion .sidebar-priority-dot { background: var(--suggestion); }
+  .sev-nitpick .sidebar-priority-dot { background: var(--nitpick); }
+  .sidebar-priority-body {
+    display: flex; flex-direction: column; gap: 1px; overflow: hidden;
+    opacity: 0; transition: opacity 0.2s ease 0.1s;
+  }
+  .sidebar.expanded .sidebar-priority-body,
+  .sidebar:hover .sidebar-priority-body { opacity: 1; }
+  .sidebar-priority-empty {
+    opacity: 0; transition: opacity 0.2s ease 0.1s;
+  }
+  .sidebar.expanded .sidebar-priority-empty,
+  .sidebar:hover .sidebar-priority-empty { opacity: 1; }
+  .sidebar-priority-title {
+    font-size: 10px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sidebar-priority-meta {
+    font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  /* ── Modal ────────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 1000; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
+  .modal-backdrop.visible { opacity: 1; pointer-events: all; }
+  .modal-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px 28px 24px; width: 340px; max-width: 90vw;
+    position: relative; text-align: center;
+    transform: translateY(30px) scale(0.95); opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+  }
+  .modal-backdrop.visible .modal-card { transform: translateY(0) scale(1); opacity: 1; }
+  .modal-close {
+    position: absolute; top: 12px; right: 16px; background: none; border: none;
+    color: var(--text-dim); font-size: 18px; cursor: pointer; transition: color 0.15s;
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px;
+  }
+  .modal-close:hover { color: var(--text); background: var(--surface-hover); }
+  .modal-avatar {
+    width: 96px; height: 96px; border-radius: 12px; margin: 0 auto 16px;
+    image-rendering: pixelated; border: 3px solid var(--accent); background: var(--bg);
+  }
+  .modal-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal-mood {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-dim); font-style: italic; margin-bottom: 14px;
+  }
+  .modal-mood-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .modal-expertise {
+    font-size: 12px; color: var(--accent); margin-bottom: 16px; line-height: 1.4;
+  }
+  .modal-stats {
+    display: flex; justify-content: center; gap: 24px; margin-bottom: 16px;
+  }
+  .modal-stat { text-align: center; }
+  .modal-stat-value { font-size: 22px; font-weight: 700; display: block; }
+  .modal-stat-label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .modal-desc {
+    font-size: 11px; color: var(--text-dim); line-height: 1.6;
+    border-top: 1px solid var(--border); padding-top: 14px; text-align: left;
+  }
+
+  /* ── Finding Detail Modal ─────────────────────────────────── */
+  .finding-card {
+    width: 380px; text-align: left;
+  }
+  .finding-detail-header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .finding-detail-avatar {
+    width: 48px; height: 48px; border-radius: 8px;
+    border: 2px solid var(--border); background: var(--bg);
+    image-rendering: pixelated; flex-shrink: 0;
+  }
+  .finding-detail-agent-info { display: flex; flex-direction: column; gap: 3px; }
+  .finding-detail-agent-name {
+    font-size: 13px; font-weight: 700; color: var(--text);
+  }
+  .finding-detail-id {
+    font-size: 11px; font-family: 'Cascadia Code', 'Fira Code', monospace;
+    color: var(--text-dim);
+  }
+  .finding-detail-badge-row { margin-bottom: 10px; }
+  .finding-detail-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .finding-detail-badge.issue { background: rgba(255,92,92,0.15); color: var(--issue); }
+  .finding-detail-badge.suggestion { background: rgba(255,184,77,0.15); color: var(--suggestion); }
+  .finding-detail-badge.nitpick { background: rgba(92,160,255,0.15); color: var(--nitpick); }
+  .finding-detail-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    line-height: 1.4; margin-bottom: 14px;
+  }
+  .finding-detail-why-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+    color: var(--accent); margin-bottom: 6px;
+  }
+  .finding-detail-why {
+    font-size: 13px; color: var(--text-dim); line-height: 1.6;
+    margin-bottom: 14px;
+  }
+  .finding-detail-file {
+    font-size: 11px; font-family: 'Cascadia Code', 'Fira Code', monospace;
+    color: var(--text-dim); background: var(--bg);
+    padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* ── Grid ──────────────────────────────────────────────────── */
+  .grid {
+    display: grid; gap: 1px; background: var(--border); flex: 1; min-height: 0;
+  }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .panel {
+    background: var(--surface); display: flex; flex-direction: column;
+    overflow: hidden; min-height: 180px;
+  }
+  .panel-header {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .panel-title { display: flex; align-items: center; gap: 8px; }
+  .panel-title h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+
+  /* Avatar */
+  .agent-avatar {
+    width: 32px; height: 32px; min-width: 32px; min-height: 32px;
+    border-radius: 6px; border: 2px solid var(--border); background: var(--bg);
+    image-rendering: pixelated; transition: border-color 0.3s; overflow: hidden;
+  }
+  .avatar-fallback {
+    width: 32px; height: 32px; min-width: 32px; border-radius: 6px;
+    border: 2px solid var(--border); background: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: white;
+  }
+  .panel.mood-happy .agent-avatar { border-color: var(--praise); }
+  .panel.mood-proud .agent-avatar { border-color: var(--praise); }
+  .panel.mood-thinking .agent-avatar { border-color: var(--suggestion); }
+  .panel.mood-concerned .agent-avatar { border-color: var(--issue); }
+  .panel.mood-idle .agent-avatar { border-color: var(--border); }
+
+  .agent-info { display: flex; flex-direction: column; }
+  .agent-mood { font-size: 9px; color: var(--text-dim); font-style: italic; margin-top: 1px; }
+
+  .panel-stats { display: flex; gap: 8px; font-size: 10px; }
+  .stat-open { color: var(--issue); font-weight: 600; }
+  .stat-resolved { color: var(--praise); font-weight: 600; }
+
+  .last-checked { font-size: 9px; color: var(--text-dim); padding: 4px 12px 0; flex-shrink: 0; }
+
+  .findings-list { flex: 1; overflow-y: auto; padding: 6px; min-height: 0; }
+  .findings-list::-webkit-scrollbar { width: 4px; }
+  .findings-list::-webkit-scrollbar-track { background: transparent; }
+  .findings-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .finding {
+    padding: 7px 10px; border-radius: 5px; margin-bottom: 3px;
+    border-left: 3px solid transparent; transition: background 0.15s;
+    animation: slideIn 0.3s ease-out; cursor: pointer;
+  }
+  .finding:hover, .finding:focus-visible { background: var(--surface-hover); outline: none; }
+  .finding:hover .finding-title, .finding:focus-visible .finding-title { color: var(--accent); }
+  .finding.severity-issue { border-left-color: var(--issue); }
+  .finding.severity-suggestion { border-left-color: var(--suggestion); }
+  .finding.severity-nitpick { border-left-color: var(--nitpick); }
+  .finding.severity-praise { border-left-color: var(--praise); }
+  .finding.resolved { background: var(--resolved-bg); opacity: 0.6; }
+  .finding.resolved .finding-title { text-decoration: line-through; color: var(--resolved-text); }
+
+  .finding-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 2px; }
+  .finding-title { font-size: 11px; font-weight: 600; flex: 1; }
+
+  .severity-badge {
+    font-size: 8px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
+  }
+  .severity-badge.issue { background: rgba(255,92,92,0.15); color: var(--issue); }
+  .severity-badge.suggestion { background: rgba(255,184,77,0.15); color: var(--suggestion); }
+  .severity-badge.nitpick { background: rgba(92,160,255,0.15); color: var(--nitpick); }
+  .severity-badge.praise { background: rgba(74,222,128,0.15); color: var(--praise); }
+
+  .finding-desc {
+    font-size: 10px; color: var(--text-dim); line-height: 1.4; margin-bottom: 2px; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .finding:focus-visible .finding-desc, .finding:hover .finding-desc {
+    -webkit-line-clamp: unset; overflow: visible;
+  }
+  .finding-meta {
+    font-size: 9px; color: var(--text-dim);
+    font-family: 'Cascadia Code', 'Fira Code', monospace; opacity: 0.7;
+    overflow-wrap: anywhere; word-break: break-all;
+  }
+  .resolved-check { color: var(--praise); font-weight: 700; margin-right: 4px; }
+
+  .empty-state {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; font-size: 11px; color: var(--text-dim); font-style: italic;
+  }
+
+  /* Loading skeleton */
+  .skeleton-panel { background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .skeleton-row {
+    height: 12px; border-radius: 4px;
+    background: linear-gradient(90deg, var(--border) 25%, var(--surface-hover) 50%, var(--border) 75%);
+    background-size: 200% 100%; animation: shimmer 1.5s infinite;
+  }
+  .skeleton-row.w60 { width: 60%; } .skeleton-row.w80 { width: 80%; } .skeleton-row.w40 { width: 40%; }
+  .skeleton-avatar {
+    width: 32px; height: 32px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--border) 25%, var(--surface-hover) 50%, var(--border) 75%);
+    background-size: 200% 100%; animation: shimmer 1.5s infinite;
+  }
+  .skeleton-header { display: flex; align-items: center; gap: 8px; }
+
+  @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── Responsive ──────────────────────────────────────────────── */
+  @media (max-width: 600px) {
+    :root {
+      --sidebar-w-collapsed: 0px;
+      --sidebar-w-expanded: 0px;
+    }
+    .sidebar { display: none; }
+    .grid.cols-3, .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid.cols-2 { grid-template-columns: 1fr; }
+    header { padding: 8px 12px; }
+    .summary-bar { padding: 6px 12px; }
+  }
+  @media (max-width: 480px) {
+    .grid.cols-2, .grid.cols-3, .grid.cols-4 { grid-template-columns: 1fr; }
+    .audit-btn .audit-btn-label { display: none; }
+  }
+  @keyframes pulse {
+    from { box-shadow: 0 0 5px rgba(255, 215, 0, 0.3); }
+    to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <img src="/CCC.png" alt="CodeOps Command Center" class="header-logo" />
+    <div>
+      <h1>CODEOPS COMMAND CENTER</h1>
+      <div class="project-path" id="projectPath">Loading...</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <div class="connection-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </div>
+</header>
+
+<div class="summary-bar" id="summaryBar" role="status" aria-live="polite" aria-label="Review summary"></div>
+
+<div class="main-row">
+  <div class="sidebar" id="sidebar">
+    <button class="sidebar-toggle" id="sidebarToggle" title="Toggle agent roster" aria-label="Toggle agent roster" aria-expanded="false">&#9776;</button>
+    <div class="sidebar-section open" id="sectionAgents">
+      <button class="sidebar-section-label" id="sectionAgentsToggle" aria-label="Toggle Agents section">
+        <span class="sidebar-section-icon">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+            <path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/>
+          </svg>
+        </span>
+        <span class="sidebar-section-text">Agents</span>
+        <span class="sidebar-section-chevron">&#9658;</span>
+      </button>
+      <div class="sidebar-section-body">
+        <div class="sidebar-agents" id="sidebarAgents"></div>
+      </div>
+    </div>
+    <div class="sidebar-section open" id="sectionPriority">
+      <button class="sidebar-section-label" id="sectionPriorityToggle" aria-label="Toggle Priority section">
+        <span class="sidebar-section-icon">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M3.5 2a.5.5 0 0 1 .5.5v8.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L3 11.293V2.5a.5.5 0 0 1 .5-.5zm3.5 3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z"/>
+          </svg>
+        </span>
+        <span class="sidebar-section-text">Priority</span>
+        <span class="sidebar-section-chevron">&#9658;</span>
+      </button>
+      <div class="sidebar-section-body">
+        <div class="sidebar-priority" id="sidebarPriority"></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- Finding Detail Modal -->
+<div class="modal-backdrop" id="findingBackdrop" role="dialog" aria-modal="true" aria-labelledby="findingDetailTitle">
+  <div class="modal-card finding-card" id="findingCard">
+    <button class="modal-close" id="findingClose" aria-label="Close finding detail">&times;</button>
+    <div class="finding-detail-header" id="findingDetailHeader">
+      <img class="finding-detail-avatar" id="findingDetailAvatar" alt="" />
+      <div class="finding-detail-agent-info">
+        <div class="finding-detail-agent-name" id="findingDetailAgent"></div>
+        <div class="finding-detail-id" id="findingDetailId"></div>
+      </div>
+    </div>
+    <div class="finding-detail-badge-row">
+      <span class="finding-detail-badge" id="findingDetailBadge"></span>
+    </div>
+    <div class="finding-detail-title" id="findingDetailTitle"></div>
+    <div class="finding-detail-why-label">Why does this matter?</div>
+    <div class="finding-detail-why" id="findingDetailWhy"></div>
+    <div class="finding-detail-file" id="findingDetailFile"></div>
+  </div>
+</div>
+
+<!-- Agent Modal -->
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalName">
+  <div class="modal-card" id="modalCard">
+    <button class="modal-close" id="modalClose" aria-label="Close agent details">&times;</button>
+    <img class="modal-avatar" id="modalAvatar" alt="" />
+    <div class="modal-name" id="modalName"></div>
+    <div class="modal-mood" id="modalMood"><div class="modal-mood-dot" id="modalMoodDot"></div><span id="modalMoodText"></span></div>
+    <div class="modal-expertise" id="modalExpertise"></div>
+    <div class="modal-stats" id="modalStats"></div>
+    <div class="modal-desc" id="modalDesc"></div>
+  </div>
+</div>
+
+<script>
+let ROLES = [];
+const SEVERITY_TYPES = ["issue", "suggestion", "nitpick", "praise"];
+let currentAllData = {};
+
+// ── Agent Personas ──────────────────────────────────────────────
+const AGENT_PERSONAS = {
+  "doc-generator": {
+    seed: "DocBot-Librarian", hair: "short04", hairColor: "d2b48c",
+    clothing: "variant04", clothingColor: "6c63ff", skinColor: "f5d6b0",
+    expertise: "Documentation quality, structure, and maintainability via the Diataxis framework.",
+  },
+  "code-reviewer": {
+    seed: "CodeEye-Inspector", hair: "short01", hairColor: "2c1b18",
+    clothing: "variant14", clothingColor: "e74c3c", skinColor: "c98276",
+    expertise: "Code correctness, readability, edge cases, and maintainability via Google review guidelines.",
+  },
+  "architecture-reviewer": {
+    seed: "ArchMind-Builder", hair: "short05", hairColor: "4a3728",
+    clothing: "variant08", clothingColor: "2ecc71", skinColor: "d29985",
+    expertise: "System design, modularity, and dependency management via SOLID and Twelve-Factor.",
+  },
+  "test-writer": {
+    seed: "TestBot-Verifier", hair: "short02", hairColor: "e8d5b7",
+    clothing: "variant12", clothingColor: "f39c12", skinColor: "f5d6b0",
+    expertise: "Test quality, coverage strategy, and determinism via FIRST principles and AAA pattern.",
+  },
+  "compliance-reviewer": {
+    seed: "ShieldGuard-Auditor", hair: "short03", hairColor: "1a1a2e",
+    clothing: "variant06", clothingColor: "9b59b6", skinColor: "a0785a",
+    expertise: "Security (OWASP Top 10), accessibility (WCAG 2.2 AA), and linting compliance.",
+  },
+  "agent-watcher": {
+    seed: "WatchTower-Sentinel", hair: "short01", hairColor: "c0c0c0",
+    clothing: "variant02", clothingColor: "1abc9c", skinColor: "c98276",
+    expertise: "AI agent safety, prompt injection defense, and execution constraints via OWASP for LLMs.",
+  },
+  "ux-reviewer": {
+    seed: "PixelEye-Designer", hair: "long09", hairColor: "ff6b9d",
+    clothing: "variant18", clothingColor: "ff6b9d", skinColor: "f5d6b0",
+    expertise: "User experience, interaction design, visual feedback, and responsiveness.",
+  },
+  "performance-reviewer": {
+    seed: "SpeedDemon-Profiler", hair: "short05", hairColor: "e74c3c",
+    clothing: "variant10", clothingColor: "e67e22", skinColor: "d29985",
+    expertise: "Runtime performance, algorithm efficiency, bundle size, and rendering via RAIL model.",
+  },
+  "resilience-reviewer": {
+    seed: "IronWall-Guardian", hair: "short03", hairColor: "3d3d5c",
+    clothing: "variant16", clothingColor: "3498db", skinColor: "c98276",
+    expertise: "Fault tolerance, graceful degradation, error recovery, and connection resilience.",
+  },
+  "visual-regression-reviewer": {
+    seed: "PixelLens-Spotter", hair: "short02", hairColor: "8e44ad",
+    clothing: "variant20", clothingColor: "8e44ad", skinColor: "f5d6b0",
+    expertise: "Layout integrity, overflow detection, cross-browser rendering, and visual consistency.",
+  },
+};
+
+const MOODS = {
+  idle:      { mouth: "happy01", eyes: "variant01", label: "Standing by...", color: "var(--text-dim)" },
+  happy:     { mouth: "happy07", eyes: "variant12", label: "All clear!", color: "var(--praise)" },
+  thinking:  { mouth: "happy03", eyes: "variant04", label: "Hmm, some suggestions...", color: "var(--suggestion)" },
+  concerned: { mouth: "sad05",   eyes: "variant08", label: "Issues found!", color: "var(--issue)" },
+  proud:     { mouth: "happy13", eyes: "variant12", label: "All resolved!", color: "var(--praise)" },
+};
+
+function getAgentMood(data) {
+  const findings = data.findings || [];
+  if (!data.lastChecked) return "idle";
+  let openIssues = 0, openOther = 0, resolved = 0;
+  for (const f of findings) {
+    if (f.severity === "praise") continue;
+    if (f.status === "resolved") { resolved++; continue; }
+    if (f.status === "open" && f.severity === "issue") openIssues++;
+    else if (f.status === "open") openOther++;
+  }
+  const totalOpen = openIssues + openOther;
+  if (totalOpen === 0 && resolved > 0) return "proud";
+  if (totalOpen === 0) return "happy";
+  if (openIssues > 0) return "concerned";
+  if (openOther > 0) return "thinking";
+  return "happy";
+}
+
+function buildAvatarUrl(agentId, mood, size) {
+  const p = AGENT_PERSONAS[agentId];
+  const m = MOODS[mood];
+  if (!p) return `https://api.dicebear.com/9.x/pixel-art/svg?seed=${agentId}&mouth=${m.mouth}&eyes=${m.eyes}&size=${size || 64}`;
+  const params = new URLSearchParams({
+    seed: p.seed, hair: p.hair, hairColor: p.hairColor,
+    clothing: p.clothing, clothingColor: p.clothingColor, skinColor: p.skinColor,
+    mouth: m.mouth, eyes: m.eyes,
+    accessoriesProbability: "0", beardProbability: "0", glassesProbability: "0",
+    size: String(size || 64),
+  });
+  return `https://api.dicebear.com/9.x/pixel-art/svg?${params}`;
+}
+
+// ── Utilities ───────────────────────────────────────────────────
+
+function timeAgo(iso) {
+  if (!iso) return "never";
+  const date = new Date(iso);
+  const diff = Date.now() - date.getTime();
+  const secs = Math.floor(diff / 1000);
+  if (secs < 60) return "just now";
+  const mins = Math.floor(secs / 60);
+  if (mins === 1) return "1 min ago";
+  if (mins < 10) return `${mins} mins ago`;
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+function escapeHTML(str) {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function buildRolesFromData(allData) {
+  return Object.keys(allData)
+    .filter(key => key !== "audit-requested")
+    .sort()
+    .map(key => {
+      const d = allData[key];
+      const name = (d.role || key).replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      const icon = name.charAt(0);
+      return { key, label: name, icon };
+    });
+}
+
+// ── Sidebar ─────────────────────────────────────────────────────
+
+// ── SVG icon strings ─────────────────────────────────────────────
+const SVG_BURGER = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>`;
+const SVG_PIN    = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A5.921 5.921 0 0 1 5 6.854V2.377a2.142 2.142 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354z"/></svg>`;
+const SVG_UNPIN  = `<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a5.927 5.927 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707-.195-.195.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a5.922 5.922 0 0 1 1.013.16l3.134-3.133a2.772 2.772 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146z"/></svg>`;
+
+function initSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  const toggle  = document.getElementById("sidebarToggle");
+  const saved   = localStorage.getItem("sidebar-expanded");
+  if (saved === "true") sidebar.classList.add("expanded");
+
+  const isPinned = () => sidebar.classList.contains("expanded");
+
+  const setIcon = (icon, label) => {
+    toggle.innerHTML = icon;
+    toggle.setAttribute("aria-label", label);
+    toggle.setAttribute("aria-expanded", isPinned() ? "true" : "false");
+    toggle.setAttribute("title", label);
+  };
+
+  const refreshIcon = () => {
+    setIcon(isPinned() ? SVG_PIN : SVG_BURGER, isPinned() ? "Unpin sidebar" : "Pin sidebar");
+  };
+
+  toggle.addEventListener("mouseenter", () =>
+    setIcon(isPinned() ? SVG_UNPIN : SVG_PIN, isPinned() ? "Unpin sidebar" : "Pin sidebar")
+  );
+  toggle.addEventListener("mouseleave", refreshIcon);
+  toggle.addEventListener("click", () => {
+    sidebar.classList.toggle("expanded");
+    localStorage.setItem("sidebar-expanded", isPinned());
+    refreshIcon();
+  });
+  refreshIcon();
+
+  // Collapsible sections
+  [
+    { sectionId: "sectionAgents",   toggleId: "sectionAgentsToggle",   storageKey: "section-agents-open" },
+    { sectionId: "sectionPriority", toggleId: "sectionPriorityToggle", storageKey: "section-priority-open" },
+  ].forEach(({ sectionId, toggleId, storageKey }) => {
+    const section = document.getElementById(sectionId);
+    const btn     = document.getElementById(toggleId);
+    if (localStorage.getItem(storageKey) === "false") section.classList.remove("open");
+    btn.setAttribute("aria-expanded", section.classList.contains("open") ? "true" : "false");
+    btn.addEventListener("click", () => {
+      section.classList.toggle("open");
+      const isOpen = section.classList.contains("open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      localStorage.setItem(storageKey, isOpen);
+    });
+  });
+}
+
+// ── Flyouts ──────────────────────────────────────────────────────
+function initFlyouts() {
+  setupFlyout("sectionAgentsToggle",   "flyout-agents");
+  setupFlyout("sectionPriorityToggle", "flyout-priority");
+}
+
+function setupFlyout(triggerId, flyoutId) {
+  const trigger = document.getElementById(triggerId);
+  const flyout  = document.getElementById(flyoutId);
+  if (!trigger || !flyout) return;
+  let hideTimer = null;
+
+  const show = () => {
+    clearTimeout(hideTimer);
+    const sidebarRect = document.getElementById("sidebar").getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    flyout.style.left = sidebarRect.right + "px";
+    flyout.style.top  = triggerRect.top + "px";
+    flyout.style.maxHeight = (window.innerHeight - triggerRect.top - 12) + "px";
+    flyout.classList.add("visible");
+  };
+  const hide = () => { hideTimer = setTimeout(() => flyout.classList.remove("visible"), 120); };
+
+  trigger.addEventListener("mouseenter", show);
+  trigger.addEventListener("mouseleave", hide);
+  flyout.addEventListener("mouseenter",  () => clearTimeout(hideTimer));
+  flyout.addEventListener("mouseleave",  hide);
+}
+
+// Agent category weight for foundational ordering (lower = higher priority)
+const AGENT_PRIORITY_WEIGHT = {
+  "resilience-reviewer": 0,
+  "code-reviewer": 1,
+  "compliance-reviewer": 2,
+  "ux-reviewer": 3,
+  "performance-reviewer": 4,
+  "visual-regression-reviewer": 5,
+};
+const SEVERITY_PRIORITY_WEIGHT = { issue: 0, suggestion: 10, nitpick: 20 };
+
+// Track last-rendered mood per agent so we skip unnecessary sidebar rebuilds
+const _sidebarMoodCache = {};
+
+function renderSidebarAgent(role, data) {
+  const mood = getAgentMood(data);
+  const avatarUrl = buildAvatarUrl(role.key, mood, 56);
+  return `<div class="sidebar-agent mood-${mood}" data-agent="${role.key}" title="${role.label}">
+    <img class="sidebar-agent-avatar" src="${avatarUrl}" alt="${role.label}" loading="lazy"
+      onerror="this.outerHTML='<div style=\\'width:28px;height:28px;min-width:28px;border-radius:6px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white\\'>${role.icon}</div>'" />
+    <span class="sidebar-agent-name">${role.label}</span>
+  </div>`;
+}
+
+function renderSidebar(allData) {
+  const container = document.getElementById("sidebarAgents");
+  const flyoutBody = document.getElementById("flyout-agents-body");
+
+  // Check if role list changed — if so, full rebuild
+  const roleKeys = ROLES.map(r => r.key).join(",");
+  const prevRoleKeys = container.dataset.roleKeys || "";
+  const rolesChanged = roleKeys !== prevRoleKeys;
+
+  if (rolesChanged) {
+    container.innerHTML = ROLES.map(role =>
+      renderSidebarAgent(role, allData[role.key] || { findings: [] })
+    ).join("");
+    container.dataset.roleKeys = roleKeys;
+    ROLES.forEach(role => {
+      _sidebarMoodCache[role.key] = getAgentMood(allData[role.key] || { findings: [] });
+    });
+  } else {
+    // Partial update — only replace agents whose mood changed
+    ROLES.forEach((role, i) => {
+      const newMood = getAgentMood(allData[role.key] || { findings: [] });
+      if (_sidebarMoodCache[role.key] !== newMood) {
+        const el = container.children[i];
+        if (el) {
+          const tmp = document.createElement("div");
+          tmp.innerHTML = renderSidebarAgent(role, allData[role.key] || { findings: [] });
+          el.replaceWith(tmp.firstElementChild);
+        }
+        _sidebarMoodCache[role.key] = newMood;
+      }
+    });
+  }
+
+  const attachAgentClicks = (root) =>
+    root.querySelectorAll(".sidebar-agent").forEach(el =>
+      el.addEventListener("click", () => openModal(el.dataset.agent))
+    );
+
+  attachAgentClicks(container);
+
+  // Mirror to agents flyout only if it's currently visible
+  if (flyoutBody) {
+    const flyout = document.getElementById("flyout-agents");
+    if (flyout && flyout.classList.contains("visible")) {
+      flyoutBody.innerHTML = container.innerHTML;
+      attachAgentClicks(flyoutBody);
+    }
+  }
+
+  renderSidebarPriority(allData);
+}
+
+let _priorityFingerprint = "";
+
+function renderSidebarPriority(allData) {
+  const container = document.getElementById("sidebarPriority");
+
+  // Flatten all open, non-praise findings across all agents
+  const items = [];
+  for (const [agentKey, data] of Object.entries(allData)) {
+    const findings = Array.isArray(data.findings) ? data.findings : [];
+    for (const f of findings) {
+      if (f.status !== "open" || f.severity === "praise") continue;
+      const role = ROLES.find(r => r.key === agentKey);
+      items.push({ ...f, agentKey, agentLabel: role ? role.label : agentKey });
+    }
+  }
+
+  // Sort by foundational priority: severity tier first, then agent category
+  items.sort((a, b) => {
+    const sa = (SEVERITY_PRIORITY_WEIGHT[a.severity] ?? 30) + (AGENT_PRIORITY_WEIGHT[a.agentKey] ?? 9);
+    const sb = (SEVERITY_PRIORITY_WEIGHT[b.severity] ?? 30) + (AGENT_PRIORITY_WEIGHT[b.agentKey] ?? 9);
+    return sa - sb;
+  });
+
+  // Dirty check — skip rebuild if sorted list hasn't changed
+  const fingerprint = items.map(f => `${f.id}:${f.severity}`).join("|");
+  if (fingerprint === _priorityFingerprint) return;
+  _priorityFingerprint = fingerprint;
+
+  if (items.length === 0) {
+    container.innerHTML = `<div style="padding:10px;font-size:10px;color:var(--text-dim)" class="sidebar-priority-empty">All clear ✓</div>`;
+    return;
+  }
+
+  container.innerHTML = items.map((f, idx) => `
+    <div class="sidebar-priority-item sev-${f.severity}" data-agent="${f.agentKey}" title="${escapeHTML(f.title)} (${f.agentLabel})">
+      <div class="sidebar-priority-dot" data-title="${escapeHTML(f.title)}"></div>
+      <div class="sidebar-priority-body">
+        <span class="sidebar-priority-title">${escapeHTML(f.title)}</span>
+        <span class="sidebar-priority-meta">${f.agentLabel.replace(" Reviewer", "")}</span>
+      </div>
+    </div>`).join("");
+
+  const attachPriorityClicks = (root) =>
+    root.querySelectorAll(".sidebar-priority-item").forEach((el, idx) =>
+      el.addEventListener("click", () => openFindingDetail(items[idx], items[idx].agentKey))
+    );
+
+  attachPriorityClicks(container);
+
+  // Mirror to priority flyout
+  const flyoutBody = document.getElementById("flyout-priority-body");
+  if (flyoutBody) {
+    flyoutBody.innerHTML = container.innerHTML;
+    attachPriorityClicks(flyoutBody);
+  }
+}
+
+// ── Focus trap ──────────────────────────────────────────────────
+let _trapHandler = null;
+
+function trapFocus(container) {
+  releaseFocus();
+  const focusable = () => Array.from(
+    container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+  ).filter(el => !el.disabled && el.offsetParent !== null);
+
+  _trapHandler = (e) => {
+    if (e.key !== "Tab") return;
+    const els = focusable();
+    if (!els.length) return;
+    const first = els[0], last = els[els.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener("keydown", _trapHandler);
+}
+
+function releaseFocus() {
+  if (_trapHandler) { document.removeEventListener("keydown", _trapHandler); _trapHandler = null; }
+}
+
+// ── Modal ───────────────────────────────────────────────────────
+
+function openModal(agentId) {
+  const data = currentAllData[agentId] || { findings: [] };
+  const role = ROLES.find(r => r.key === agentId);
+  if (!role) return;
+  const mood = getAgentMood(data);
+  const moodInfo = MOODS[mood];
+  const persona = AGENT_PERSONAS[agentId];
+  const findings = Array.isArray(data.findings) ? data.findings : [];
+  const actionable = findings.filter(f => f.severity !== "praise");
+  const open = actionable.filter(f => f.status === "open").length;
+  const resolved = actionable.filter(f => f.status === "resolved").length;
+
+  document.getElementById("modalAvatar").src = buildAvatarUrl(agentId, mood, 192);
+  document.getElementById("modalAvatar").alt = `${role.label} - ${moodInfo.label}`;
+  document.getElementById("modalName").textContent = role.label;
+  document.getElementById("modalMoodText").textContent = moodInfo.label;
+  document.getElementById("modalMoodDot").style.background = moodInfo.color;
+  document.getElementById("modalExpertise").textContent = persona ? persona.expertise : "Specialist agent";
+  document.getElementById("modalStats").innerHTML = `
+    <div class="modal-stat"><span class="modal-stat-value" style="color:var(--issue)">${open}</span><span class="modal-stat-label">Open</span></div>
+    <div class="modal-stat"><span class="modal-stat-value" style="color:var(--praise)">${resolved}</span><span class="modal-stat-label">Resolved</span></div>
+    <div class="modal-stat"><span class="modal-stat-value" style="color:var(--text)">${findings.length}</span><span class="modal-stat-label">Total</span></div>
+  `;
+  document.getElementById("modalDesc").textContent = persona
+    ? `${role.label} evaluates your code against industry-standard checklists. ${persona.expertise}`
+    : "This agent reviews your code for quality issues.";
+
+  const backdrop = document.getElementById("modalBackdrop");
+  backdrop.classList.add("visible");
+  trapFocus(backdrop);
+  document.getElementById("modalClose").focus();
+}
+
+function closeModal() {
+  document.getElementById("modalBackdrop").classList.remove("visible");
+  releaseFocus();
+}
+
+document.getElementById("modalClose").addEventListener("click", closeModal);
+document.getElementById("modalBackdrop").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("modalBackdrop")) closeModal();
+});
+
+// ── Finding Detail Modal ─────────────────────────────────────────
+
+// Plain-language "why it matters" explanations keyed by severity + agent
+function getPlainWhyItMatters(finding, agentKey) {
+  const sev = finding.severity;
+  const agentReasons = {
+    "resilience-reviewer": {
+      issue: "This can cause the app to crash or behave incorrectly under real conditions — like when the server is busy, a file is missing, or two things happen at once. Users may see errors or lose work.",
+      suggestion: "This could cause hard-to-diagnose problems later. It's not breaking anything today, but it's a weak point that could fail under pressure.",
+    },
+    "code-reviewer": {
+      issue: "The code is doing something wrong. This can show incorrect results to users — like wrong scores, wrong data, or actions that silently do nothing.",
+      suggestion: "The code works, but it's written in a way that makes it easy to break accidentally in the future. A small change elsewhere could trigger this.",
+    },
+    "compliance-reviewer": {
+      issue: "People using assistive tools (like screen readers) or keyboard-only navigation won't be able to use this properly. It may also be a security gap.",
+      suggestion: "This is a best-practice gap — no immediate harm, but it leaves the door open for issues as the app grows.",
+    },
+    "ux-reviewer": {
+      issue: "Users can get stuck or confused here. They might not know what happened, can't complete an action, or have no way to recover from an error.",
+      suggestion: "This works, but it could feel rough or frustrating — especially for first-time users.",
+    },
+    "performance-reviewer": {
+      issue: "This makes the app visibly slow or unresponsive. Users may see freezes, lag, or delayed feedback — especially on lower-end devices.",
+      suggestion: "Not a problem today, but as more data or users are added, this could slow things down noticeably.",
+    },
+    "visual-regression-reviewer": {
+      issue: "Something in the layout breaks on certain screen sizes or with certain content. Parts of the app may be hidden, cut off, or unreadable.",
+      suggestion: "The layout works in most cases, but edge cases — like very long text or small screens — can make it look broken.",
+    },
+  };
+
+  const agentMap = agentReasons[agentKey];
+  if (agentMap) {
+    return agentMap[sev] || agentMap["suggestion"] || "This finding should be looked at to keep the app healthy and reliable.";
+  }
+  if (sev === "issue") return "This is a real problem that could affect how the app works or how users experience it.";
+  return "This is something worth cleaning up to keep the codebase easy to maintain.";
+}
+
+function openFindingDetail(finding, agentKey) {
+  const role = ROLES.find(r => r.key === agentKey);
+  const agentLabel = role ? role.label : agentKey;
+  const data = currentAllData[agentKey] || {};
+  const mood = getAgentMood(data);
+  const avatarUrl = buildAvatarUrl(agentKey, mood, 96);
+
+  document.getElementById("findingDetailAvatar").src = avatarUrl;
+  document.getElementById("findingDetailAvatar").onerror = function() {
+    this.outerHTML = `<div style="width:48px;height:48px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:white">${role ? role.icon : "?"}</div>`;
+  };
+  document.getElementById("findingDetailAgent").textContent = agentLabel;
+  document.getElementById("findingDetailId").textContent = finding.id;
+
+  const badge = document.getElementById("findingDetailBadge");
+  badge.textContent = finding.severity;
+  badge.className = `finding-detail-badge ${finding.severity}`;
+
+  document.getElementById("findingDetailTitle").textContent = finding.title;
+  document.getElementById("findingDetailWhy").textContent = getPlainWhyItMatters(finding, agentKey);
+
+  const fileText = finding.file
+    ? `${finding.file}${finding.line ? ` · line ${finding.line}` : ""}`
+    : "No file reference";
+  document.getElementById("findingDetailFile").textContent = fileText;
+
+  const backdrop = document.getElementById("findingBackdrop");
+  backdrop.classList.add("visible");
+  trapFocus(backdrop);
+  document.getElementById("findingClose").focus();
+}
+
+function closeFindingDetail() {
+  document.getElementById("findingBackdrop").classList.remove("visible");
+  releaseFocus();
+}
+
+document.getElementById("findingClose").addEventListener("click", closeFindingDetail);
+document.getElementById("findingBackdrop").addEventListener("click", (e) => {
+  if (e.target === document.getElementById("findingBackdrop")) closeFindingDetail();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeModal(); closeFindingDetail(); } });
+
+// ── Rendering ───────────────────────────────────────────────────
+
+function renderSummary(allData) {
+  // Single O(n) pass — build counts for all severities simultaneously
+  const counts = { issue: { open: 0, resolved: 0 }, suggestion: { open: 0, resolved: 0 }, nitpick: { open: 0, resolved: 0 }, praise: { open: 0, resolved: 0 } };
+  let totalOpen = 0, totalResolved = 0;
+  for (const key of Object.keys(allData)) {
+    const d = allData[key];
+    if (!d || !d.findings) continue;
+    for (const f of d.findings) {
+      const c = counts[f.severity];
+      if (!c) continue;
+      if (f.status === "open") { c.open++; if (f.severity !== "praise") totalOpen++; }
+      else if (f.status === "resolved") { c.resolved++; if (f.severity !== "praise") totalResolved++; }
+    }
+  }
+  const items = SEVERITY_TYPES.map(sev => {
+    const c = counts[sev];
+    if (sev === "praise") {
+      return `<li class="summary-item type-praise"><span class="label">Praise</span><span style="color:var(--praise)">${c.open + c.resolved}</span></li>`;
+    }
+    const label = sev.charAt(0).toUpperCase() + sev.slice(1) + "s";
+    return `<li class="summary-item type-${sev}"><span class="label">${label}</span><span class="open-count">${c.open} open</span><span class="resolved-count">${c.resolved} closed</span></li>`;
+  }).join("");
+  const total = `<div class="summary-total"><div>Total: <span class="total-open">${totalOpen} open</span></div><div><span class="total-resolved">${totalResolved} closed</span></div></div>`;
+  document.getElementById("summaryBar").innerHTML =
+    '<div class="summary-bar-items"><ul style="display:contents">' + items + '</ul></div>' + total;
+}
+
+function renderPanel(role, data) {
+  const findings = Array.isArray(data.findings) ? data.findings : [];
+  const praises = findings.filter(f => f.severity === "praise");
+  const actionable = findings.filter(f => f.severity !== "praise");
+  const open = actionable.filter(f => f.status === "open");
+  const resolved = actionable.filter(f => f.status === "resolved");
+  const mood = getAgentMood(data);
+  const moodInfo = MOODS[mood];
+  const avatarUrl = buildAvatarUrl(role.key, mood);
+
+  const severityOrder = { issue: 0, suggestion: 1, nitpick: 2, praise: 3 };
+  const sorted = [...open.sort((a, b) => (severityOrder[a.severity] || 9) - (severityOrder[b.severity] || 9)), ...resolved, ...praises];
+
+  let findingsHTML = "";
+  if (sorted.length === 0) {
+    findingsHTML = `<div class="empty-state">No findings yet</div>`;
+  } else {
+    findingsHTML = sorted.map(f => {
+      const isResolved = f.status === "resolved";
+      const fileMeta = f.file ? `${f.file}${f.line ? ":" + f.line : ""}` : "";
+      return `
+        <div class="finding severity-${f.severity} ${isResolved ? "resolved" : ""}" role="button" tabindex="0" aria-label="${escapeHTML(f.title)} — ${f.severity}" data-agent="${role.key}" data-id="${escapeHTML(f.id)}">
+          <div class="finding-top">
+            <span class="finding-title">${isResolved ? '<span class="resolved-check">&#10003;</span>' : ""}${escapeHTML(f.title)}</span>
+            <span class="severity-badge ${f.severity}">${f.severity}</span>
+          </div>
+          <div class="finding-desc">${escapeHTML(f.description)}</div>
+          <div class="finding-meta">${fileMeta}${isResolved ? " &middot; resolved " + timeAgo(f.resolvedAt) : ""}</div>
+        </div>`;
+    }).join("");
+  }
+
+  return `
+    <section class="panel mood-${mood}" id="panel-${role.key}" aria-label="${role.label} findings">
+      <div class="panel-header">
+        <div class="panel-title">
+          <img class="agent-avatar" src="${avatarUrl}" alt="${role.label} - ${moodInfo.label}" loading="lazy" onerror="this.outerHTML='<div class=\\'avatar-fallback\\'>${role.icon}</div>'" />
+          <div class="agent-info"><h2>${role.label}</h2><span class="agent-mood">${moodInfo.label}</span></div>
+        </div>
+        <div class="panel-stats"><span class="stat-open">${open.length} open</span><span class="stat-resolved">${resolved.length} resolved</span></div>
+      </div>
+      <div class="last-checked">Last checked: ${timeAgo(data.lastChecked)}</div>
+      <div class="findings-list" role="list">${findingsHTML}</div>
+    </section>`;
+}
+
+// ── Diff-based rendering ───────────────────────────────────────
+let prevData = {};
+let gridInitialized = false;
+
+function initGrid(allData) {
+  ROLES = buildRolesFromData(allData);
+  const grid = document.getElementById("grid");
+  const count = ROLES.length;
+  grid.className = "grid";
+  if (count <= 4) grid.classList.add("cols-2");
+  else if (count <= 9) grid.classList.add("cols-3");
+  else grid.classList.add("cols-4");
+  const cols = count <= 4 ? 2 : count <= 9 ? 3 : 4;
+  grid.style.gridTemplateRows = `repeat(${Math.ceil(count / cols)}, 1fr)`;
+  grid.innerHTML = ROLES.map(role => renderPanel(role, allData[role.key] || { findings: [] })).join("");
+  localStorage.setItem("last-agent-count", count);
+  gridInitialized = true;
+
+  // Delegated click + keyboard handler for all findings in the grid
+  const activateFinding = (e) => {
+    const el = e.target.closest(".finding[data-agent][data-id]");
+    if (!el) return;
+    const agentKey = el.dataset.agent;
+    const findingId = el.dataset.id;
+    const agentData = currentAllData[agentKey];
+    if (!agentData) return;
+    const finding = (agentData.findings || []).find(f => f.id === findingId);
+    if (finding) openFindingDetail(finding, agentKey);
+  };
+  grid.addEventListener("click", activateFinding);
+  grid.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activateFinding(e); }
+  });
+}
+
+function panelChanged(key, allData) {
+  const prev = prevData[key]; const curr = allData[key];
+  if (!prev || !curr) return true;
+  if (prev.lastChecked !== curr.lastChecked) return true;
+  if (prev.summary !== curr.summary) return true;
+  if ((prev.findings || []).length !== (curr.findings || []).length) return true;
+  const pf = prev.findings || []; const cf = curr.findings || [];
+  for (let i = 0; i < cf.length; i++) {
+    if (!pf[i] || pf[i].status !== cf[i].status || pf[i].id !== cf[i].id) return true;
+  }
+  return false;
+}
+
+function renderAll(allData) {
+  currentAllData = allData;
+  const newRoles = buildRolesFromData(allData);
+  const rolesChanged = !gridInitialized || newRoles.length !== ROLES.length || newRoles.some((r, i) => r.key !== ROLES[i]?.key);
+
+  if (rolesChanged) { ROLES = newRoles; initGrid(allData); }
+  else {
+    for (const role of ROLES) {
+      if (panelChanged(role.key, allData)) {
+        const el = document.getElementById(`panel-${role.key}`);
+        if (el) { const tmp = document.createElement("div"); tmp.innerHTML = renderPanel(role, allData[role.key] || { findings: [] }); el.replaceWith(tmp.firstElementChild); }
+      }
+    }
+  }
+
+  renderSummary(allData);
+  renderSidebar(allData);
+  prevData = structuredClone(allData);
+}
+
+// ── Loading skeleton ───────────────────────────────────────────
+function showLoadingSkeleton() {
+  const grid = document.getElementById("grid");
+  // Use previously cached agent count to avoid jarring layout shift on load
+  const count = parseInt(localStorage.getItem("last-agent-count") || "6", 10);
+  const cols = count <= 4 ? 2 : count <= 9 ? 3 : 4;
+  const rows = Math.ceil(count / cols);
+  grid.className = `grid cols-${cols}`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  let s = "";
+  for (let i = 0; i < count; i++) s += `<div class="skeleton-panel"><div class="skeleton-header"><div class="skeleton-avatar"></div><div class="skeleton-row w60"></div></div><div class="skeleton-row w80"></div><div class="skeleton-row w60"></div><div class="skeleton-row w40"></div></div>`;
+  grid.innerHTML = s;
+}
+
+// ── Init ────────────────────────────────────────────────────────
+
+initSidebar();
+initFlyouts();
+showLoadingSkeleton();
+
+fetch("/api/findings")
+  .then(r => r.json())
+  .then(res => {
+    document.getElementById("projectPath").textContent = res.projectPath;
+    renderAll(res.data);
+  })
+  .catch(err => {
+    document.getElementById("projectPath").textContent = "Connection failed";
+    showFetchError();
+  });
+
+function showFetchError() {
+  document.getElementById("grid").innerHTML =
+    '<div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;color:var(--issue);font-size:14px;flex-direction:column;gap:12px;padding:40px">'
+    + '<div style="font-size:24px">&#9888;</div>'
+    + '<div>Could not connect to the dashboard server.</div>'
+    + '<div style="color:var(--text-dim);font-size:12px">Is it running? Try: node server.js --project &lt;path&gt;</div>'
+    + '<button onclick="retryFetch()" style="margin-top:4px;padding:8px 20px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.5px">↻ Retry Connection</button>'
+    + '</div>';
+}
+
+function retryFetch() {
+  showLoadingSkeleton();
+  fetch("/api/findings")
+    .then(r => r.json())
+    .then(res => {
+      document.getElementById("projectPath").textContent = res.projectPath;
+      renderAll(res.data);
+    })
+    .catch(() => showFetchError());
+}
+
+// SSE with exponential backoff
+const SSE_INITIAL_DELAY = 1000;
+const SSE_MAX_DELAY = 30000;
+let sseRetryDelay = SSE_INITIAL_DELAY;
+let wasDisconnected = false;
+let evtSource = null;
+
+function connectSSE() {
+  evtSource = new EventSource("/api/stream");
+  evtSource.onmessage = (event) => {
+    const dot = document.getElementById("statusDot");
+    const txt = document.getElementById("statusText");
+    if (event.data === "connected") {
+      sseRetryDelay = SSE_INITIAL_DELAY;
+      dot.classList.add("connected");
+      if (wasDisconnected) {
+        txt.textContent = "Reconnected!";
+        dot.style.animation = "none"; dot.offsetHeight;
+        dot.style.animation = "pulse 0.6s ease-in-out 3";
+        setTimeout(() => { txt.textContent = "Live"; dot.style.animation = ""; }, 2000);
+        wasDisconnected = false;
+      } else { txt.textContent = "Live"; }
+      return;
+    }
+    try {
+      renderAll(JSON.parse(event.data));
+    } catch (err) {
+      console.error("[SSE] Failed to parse or render update:", err);
+    }
+  };
+  evtSource.onerror = () => {
+    wasDisconnected = true; evtSource.close();
+    document.getElementById("statusDot").classList.remove("connected");
+    const delayMs = sseRetryDelay;
+    sseRetryDelay = Math.min(sseRetryDelay * 2, SSE_MAX_DELAY);
+    // Live countdown so the number actually ticks down
+    let remaining = Math.round(delayMs / 1000);
+    const txt = document.getElementById("statusText");
+    txt.textContent = `Reconnecting in ${remaining}s...`;
+    const ticker = setInterval(() => {
+      remaining--;
+      if (remaining > 0) { txt.textContent = `Reconnecting in ${remaining}s...`; }
+      else { clearInterval(ticker); }
+    }, 1000);
+    setTimeout(connectSSE, delayMs);
+  };
+}
+connectSSE();
+</script>
+
+<!-- Sidebar flyout panels (fixed position, rendered by JS) -->
+<div class="sidebar-flyout" id="flyout-agents">
+  <div class="sidebar-flyout-header">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/><path fill-rule="evenodd" d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1z"/></svg>
+    Agents
+  </div>
+  <div class="sidebar-flyout-body" id="flyout-agents-body"></div>
+</div>
+<div class="sidebar-flyout" id="flyout-priority">
+  <div class="sidebar-flyout-header">
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M3.5 2a.5.5 0 0 1 .5.5v8.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L3 11.293V2.5a.5.5 0 0 1 .5-.5zm3.5 3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zM7.5 7a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1h-5zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1h-3z"/></svg>
+    Priority
+  </div>
+  <div class="sidebar-flyout-body" id="flyout-priority-body"></div>
+</div>
+</body>
+</html>
