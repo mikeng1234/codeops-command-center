@@ -191,6 +191,26 @@
       "severity_prefix": "mf",
       "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte", "tailwind", "pwa"],
       "description": "Touch interactions, mobile layout patterns, viewport handling, and native-feel UX"
+    },
+    {
+      "id": "financial-compliance-reviewer",
+      "name": "Financial Compliance Reviewer",
+      "category": "finance",
+      "icon": "$",
+      "file": "financial-compliance-reviewer.md",
+      "severity_prefix": "fc",
+      "tech_signals": ["stripe", "plaid", "paypal", "braintree", "square", "transaction", "ledger", "balance", "invoice", "payment", "refund", "tax", "currency"],
+      "description": "Payment safety, rounding errors, audit trails, PCI-DSS basics, and financial logic correctness"
+    },
+    {
+      "id": "hipaa-compliance-reviewer",
+      "name": "HIPAA Compliance Reviewer",
+      "category": "healthcare",
+      "icon": "H",
+      "file": "hipaa-compliance-reviewer.md",
+      "severity_prefix": "hc",
+      "tech_signals": ["patient", "diagnosis", "prescription", "ehr", "fhir", "hipaa", "health", "medical", "clinical", "phi", "symptom", "condition", "treatment"],
+      "description": "PHI handling, audit logging, access control, and HIPAA technical safeguard basics"
     }
   ]
 }

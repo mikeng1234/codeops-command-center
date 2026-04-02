@@ -37,6 +37,8 @@ Then start a new Claude Code session in your project — Claude will read the re
 | `i18n-reviewer.md` | i18n Reviewer | Hardcoded UI strings, locale-unaware dates/numbers, RTL gaps |
 | `seo-reviewer.md` | SEO Reviewer | Missing meta tags, no OG image, `noindex` on production pages |
 | `mobile-first-reviewer.md` | Mobile-First Reviewer | Hover-only features, wrong input types, iOS zoom triggers |
+| `financial-compliance-reviewer.md` | Financial Compliance Reviewer | Float money errors, no idempotency, raw card data, missing audit trail |
+| `hipaa-compliance-reviewer.md` | HIPAA Compliance Reviewer | PHI in logs, unencrypted health data, no audit trail, missing BAA |
 
 ---
 

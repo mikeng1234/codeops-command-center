@@ -64,6 +64,8 @@ These aren't stylistic opinions — they're foundational engineering standards. 
 | **i18n Reviewer** | Hardcoded UI strings, locale-unaware formatting, broken pluralization |
 | **SEO Reviewer** | Missing meta tags, no Open Graph image, `noindex` on production pages |
 | **Mobile-First Reviewer** | Hover-only features, wrong input types, missing viewport tag, iOS zoom |
+| **Financial Compliance Reviewer** | Float money errors, double-charge risk, raw card data, missing audit trail |
+| **HIPAA Compliance Reviewer** | PHI in logs, unencrypted health data, no access control, missing BAA |
 
 Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
 
