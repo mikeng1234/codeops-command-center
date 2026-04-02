@@ -58,6 +58,8 @@ These aren't stylistic opinions — they're foundational engineering standards. 
 
 Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
 
+The [`agents/`](agents/) folder in this repo contains ready-to-use samples in a **lean token-efficient format** (~35 lines each vs the typical 80+). Copy them to `~/.claude/agents/` to get started, or use them as a template for your own agents.
+
 ---
 
 ## Setup

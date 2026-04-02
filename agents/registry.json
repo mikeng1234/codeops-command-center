@@ -1,0 +1,106 @@
+{
+  "version": "1.0.0",
+  "description": "Global agent databank — all available review agents across projects",
+  "agents": [
+    {
+      "id": "doc-generator",
+      "name": "Doc Generator",
+      "category": "documentation",
+      "icon": "D",
+      "file": "doc-generator.md",
+      "severity_prefix": "dg",
+      "tech_signals": ["any"],
+      "description": "Documentation quality via Diataxis framework"
+    },
+    {
+      "id": "code-reviewer",
+      "name": "Code Reviewer",
+      "category": "code-quality",
+      "icon": "C",
+      "file": "code-reviewer.md",
+      "severity_prefix": "cr",
+      "tech_signals": ["any"],
+      "description": "Code correctness, readability, maintainability via Google review guidelines"
+    },
+    {
+      "id": "architecture-reviewer",
+      "name": "Architecture Reviewer",
+      "category": "system-design",
+      "icon": "A",
+      "file": "architecture-reviewer.md",
+      "severity_prefix": "ar",
+      "tech_signals": ["any"],
+      "description": "System design via SOLID, Twelve-Factor, Gall's Law"
+    },
+    {
+      "id": "test-writer",
+      "name": "Test Writer",
+      "category": "testing",
+      "icon": "T",
+      "file": "test-writer.md",
+      "severity_prefix": "tw",
+      "tech_signals": ["any"],
+      "description": "Test quality via FIRST principles and AAA pattern"
+    },
+    {
+      "id": "compliance-reviewer",
+      "name": "Compliance Reviewer",
+      "category": "security-accessibility",
+      "icon": "S",
+      "file": "compliance-reviewer.md",
+      "severity_prefix": "cmr",
+      "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte"],
+      "description": "Security (OWASP) and accessibility (WCAG) compliance"
+    },
+    {
+      "id": "agent-watcher",
+      "name": "Agent Watcher",
+      "category": "ai-safety",
+      "icon": "W",
+      "file": "agent-watcher.md",
+      "severity_prefix": "aw",
+      "tech_signals": ["openai", "anthropic", "langchain", "llamaindex", "ai", "llm", "agent", "prompt"],
+      "description": "AI agent safety via OWASP for LLMs and Constitutional AI"
+    },
+    {
+      "id": "ux-reviewer",
+      "name": "UX Reviewer",
+      "category": "user-experience",
+      "icon": "U",
+      "file": "ux-reviewer.md",
+      "severity_prefix": "ux",
+      "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte", "canvas", "game"],
+      "description": "User experience, interaction design, visual feedback, responsiveness"
+    },
+    {
+      "id": "performance-reviewer",
+      "name": "Performance Reviewer",
+      "category": "performance",
+      "icon": "P",
+      "file": "performance-reviewer.md",
+      "severity_prefix": "pf",
+      "tech_signals": ["javascript", "typescript", "react", "vue", "canvas", "game", "algorithm", "recursion"],
+      "description": "Runtime performance, algorithm efficiency, bundle size, rendering"
+    },
+    {
+      "id": "resilience-reviewer",
+      "name": "Resilience Reviewer",
+      "category": "reliability",
+      "icon": "R",
+      "file": "resilience-reviewer.md",
+      "severity_prefix": "rs",
+      "tech_signals": ["express", "fastify", "fetch", "axios", "websocket", "sse", "eventsource", "chokidar", "fs", "http", "realtime"],
+      "description": "Fault tolerance, graceful degradation, error recovery, connection resilience"
+    },
+    {
+      "id": "visual-regression-reviewer",
+      "name": "Visual Regression Reviewer",
+      "category": "visual-quality",
+      "icon": "V",
+      "file": "visual-regression-reviewer.md",
+      "severity_prefix": "vr",
+      "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte", "tailwind", "grid", "flexbox"],
+      "description": "Layout integrity, overflow detection, cross-browser rendering, visual consistency"
+    }
+  ]
+}
