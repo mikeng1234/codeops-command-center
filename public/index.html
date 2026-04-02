@@ -732,7 +732,7 @@ function escapeHTML(str) {
 
 function buildRolesFromData(allData) {
   return Object.keys(allData)
-    .filter(key => key !== "audit-requested")
+    .filter(key => key !== "audit-requested" && key !== "manifest")
     .sort()
     .map(key => {
       const d = allData[key];

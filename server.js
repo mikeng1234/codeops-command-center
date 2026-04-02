@@ -24,7 +24,9 @@ let cachedData = {};
 
 function discoverAgents() {
   try {
-    return fs.readdirSync(reviewDir).filter((f) => f.endsWith(".json")).map((f) => f.replace(".json", ""));
+    return fs.readdirSync(reviewDir)
+      .filter((f) => f.endsWith(".json") && f !== "manifest.json" && f !== "audit-requested.json")
+      .map((f) => f.replace(".json", ""));
   } catch {
     return [];
   }
