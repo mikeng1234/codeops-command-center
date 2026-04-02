@@ -16,6 +16,7 @@ You don't need to know what WCAG is. You don't need to know what EADDRINUSE mean
 ![CodeOps Command Center Dashboard](public/Dashboard.png)
 
 **Agent finding detail pop-up:**
+
 ![Finding detail pop-up](public/window-popup.png)
 
 ---
