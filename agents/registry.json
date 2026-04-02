@@ -161,6 +161,36 @@
       "severity_prefix": "gh",
       "tech_signals": ["any"],
       "description": "Commit quality, staged file safety, .gitignore coverage, repository cleanliness"
+    },
+    {
+      "id": "i18n-reviewer",
+      "name": "i18n Reviewer",
+      "category": "localization",
+      "icon": "L",
+      "file": "i18n-reviewer.md",
+      "severity_prefix": "i18n",
+      "tech_signals": ["react", "vue", "angular", "svelte", "html", "javascript", "typescript", "i18n", "intl", "locale"],
+      "description": "Hardcoded strings, locale formatting, RTL support, and translation-readiness"
+    },
+    {
+      "id": "seo-reviewer",
+      "name": "SEO Reviewer",
+      "category": "discoverability",
+      "icon": "S",
+      "file": "seo-reviewer.md",
+      "severity_prefix": "seo",
+      "tech_signals": ["html", "react", "vue", "nextjs", "nuxt", "svelte", "sveltekit", "gatsby", "astro"],
+      "description": "Meta tags, semantic HTML, indexability, Open Graph, and Core Web Vitals hints"
+    },
+    {
+      "id": "mobile-first-reviewer",
+      "name": "Mobile-First Reviewer",
+      "category": "mobile-ux",
+      "icon": "M",
+      "file": "mobile-first-reviewer.md",
+      "severity_prefix": "mf",
+      "tech_signals": ["html", "css", "javascript", "typescript", "react", "vue", "angular", "svelte", "tailwind", "pwa"],
+      "description": "Touch interactions, mobile layout patterns, viewport handling, and native-feel UX"
     }
   ]
 }

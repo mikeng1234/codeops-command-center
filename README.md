@@ -61,6 +61,9 @@ These aren't stylistic opinions — they're foundational engineering standards. 
 | **API Design Reviewer** | Inconsistent endpoints, missing error shapes, no versioning, no rate limiting |
 | **Database Safety Reviewer** | SQL injection, missing indexes, unsafe migrations, no row-level security |
 | **Git Hygiene Reviewer** | Vague commit messages, staged `.env`, binary files, missing `.gitignore` entries |
+| **i18n Reviewer** | Hardcoded UI strings, locale-unaware formatting, broken pluralization |
+| **SEO Reviewer** | Missing meta tags, no Open Graph image, `noindex` on production pages |
+| **Mobile-First Reviewer** | Hover-only features, wrong input types, missing viewport tag, iOS zoom |
 
 Agents are stored in a global databank (`~/.claude/agents/`). Claude recommends the right ones for your stack and creates new agents when it identifies a gap the databank doesn't cover.
 

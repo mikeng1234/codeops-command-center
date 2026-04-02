@@ -34,6 +34,9 @@ Then start a new Claude Code session in your project — Claude will read the re
 | `api-design-reviewer.md` | API Design Reviewer | Inconsistent endpoints, missing error shapes, no rate limiting |
 | `database-safety-reviewer.md` | Database Safety Reviewer | SQL injection, missing indexes, unsafe migrations, no RLS |
 | `git-hygiene-reviewer.md` | Git Hygiene Reviewer | Vague commits, staged `.env`, binary files, no `.gitignore` |
+| `i18n-reviewer.md` | i18n Reviewer | Hardcoded UI strings, locale-unaware dates/numbers, RTL gaps |
+| `seo-reviewer.md` | SEO Reviewer | Missing meta tags, no OG image, `noindex` on production pages |
+| `mobile-first-reviewer.md` | Mobile-First Reviewer | Hover-only features, wrong input types, iOS zoom triggers |
 
 ---
 
